@@ -1,108 +1,36 @@
-name: Generar Códigos Taquillas
+name: Test Locker 127
 
 on:
-  # Ejecutar manualmente
   workflow_dispatch:
-    inputs:
-      max_codes:
-        description: 'Códigos por locker'
-        required: true
-        default: '500'
-        type: string
 
 jobs:
-  generate:
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 360  # 6 horas máximo
-    
-    strategy:
-      fail-fast: false  # Continuar aunque un job falle
-      matrix:
-        include:
-          - batch: 1
-            start: 1
-            end: 16
-          - batch: 2
-            start: 17
-            end: 32
-          - batch: 3
-            start: 33
-            end: 48
-          - batch: 4
-            start: 49
-            end: 64
-          - batch: 5
-            start: 65
-            end: 80
-          - batch: 6
-            start: 81
-            end: 96
-          - batch: 7
-            start: 97
-            end: 112
-          - batch: 8
-            start: 113
-            end: 128
-
+    timeout-minutes: 30
     steps:
-      - name: Checkout código
+      - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Instalar dependencias
         run: |
           pip install playwright openpyxl
           playwright install chromium
           playwright install-deps chromium
-      
-      - name: Ejecutar scraper (Batch ${{ matrix.batch }}: Lockers ${{ matrix.start }}-${{ matrix.end }})
+
+      - name: Ejecutar scraper
         env:
           LOCKER_EMAIL: ${{ secrets.LOCKER_EMAIL }}
           LOCKER_PASSWORD: ${{ secrets.LOCKER_PASSWORD }}
-          MAX_CODES: ${{ github.event.inputs.max_codes }}
-        run: |
-          python scraper.py ${{ matrix.start }} ${{ matrix.end }}
-      
+          MAX_CODES: '50'
+        run: python scraper.py 127 127
+
       - name: Subir resultados
         uses: actions/upload-artifact@v4
         with:
-          name: codigos-batch-${{ matrix.batch }}
+          name: test-locker-127
           path: codigos_lockers_*.xlsx
-          retention-days: 30
-
-  # Job para combinar todos los resultados
-  combine:
-    needs: generate
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
-      - name: Instalar openpyxl
-        run: pip install openpyxl
-      
-      - name: Descargar todos los artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: results
-      
-      - name: Combinar Excel files
-        run: |
-          python combine_results.py
-      
-      - name: Subir resultado final
-        uses: actions/upload-artifact@v4
-        with:
-          name: CODIGOS_COMPLETOS_128_LOCKERS
-          path: codigos_taquillas_COMPLETO.xlsx
-          retention-days: 90
